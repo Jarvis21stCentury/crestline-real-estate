@@ -1,26 +1,72 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-oxford: #0E1A36;
+  --color-oxford-light: #162044;
+  --color-mercury: #C8CCD1;
+  --color-platinum: #E5E4E2;
+  --color-bone: #F0EFEC;
+  --color-white: #FFFFFF;
+
+  --font-cormorant: var(--font-cormorant);
+  --font-bebas: var(--font-bebas);
+  --font-dm-serif: var(--font-dm-serif);
+  --font-body: var(--font-libre);
+  --font-playfair: var(--font-playfair);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-white);
+    color: var(--color-oxford);
+    font-family: var(--font-body), Georgia, serif;
+    font-size: 17px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-oxford);
+    color: var(--color-platinum);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .scroll-fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .scroll-fade-in.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .hero-gradient-animate {
+    background: linear-gradient(
+      135deg,
+      var(--color-oxford) 0%,
+      var(--color-oxford-light) 25%,
+      var(--color-oxford) 50%,
+      var(--color-oxford-light) 75%,
+      var(--color-oxford) 100%
+    );
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+  }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

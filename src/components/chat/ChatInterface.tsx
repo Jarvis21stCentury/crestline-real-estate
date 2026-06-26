@@ -1,25 +1,322 @@
 "use client";
 
-import { useState, useRef, useEffect, type FormEvent } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  Suspense,
+} from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap, SplitText } from "@/lib/gsap-init";
 import { cn } from "@/lib/utils";
 import { getResponse, getWelcomeOptions, type ChatOption } from "@/lib/chatbot";
+import { GenerativeScene } from "./GenerativeScene";
+import { StreamingText } from "./StreamingText";
+import { ParticleOrbitLoader } from "./ParticleOrbitLoader";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   options?: ChatOption[];
+  isStreaming?: boolean;
 }
+
+interface Ripple {
+  x: number;
+  y: number;
+  id: number;
+}
+
+// ---------------------------------------------------------------------------
+// Animated Message Wrapper
+// ---------------------------------------------------------------------------
+
+function AnimatedMessage({
+  role,
+  children,
+}: {
+  role: "user" | "assistant";
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!ref.current) return;
+      gsap.from(ref.current, {
+        x: role === "user" ? 30 : -30,
+        opacity: 0,
+        duration: 0.4,
+        ease: "power3.out",
+      });
+    },
+    { scope: ref }
+  );
+
+  return <div ref={ref}>{children}</div>;
+}
+
+// ---------------------------------------------------------------------------
+// Glow Input Bar
+// ---------------------------------------------------------------------------
+
+function GlowInputBar({
+  value,
+  onChange,
+  onSubmit,
+  onKeyDown,
+  disabled,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  disabled: boolean;
+  placeholder: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const [ripples, setRipples] = useState<Ripple[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const throttleRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const sh = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(sh, 104)}px`;
+    }
+  }, [value]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!throttleRef.current && containerRef.current) {
+      throttleRef.current = window.setTimeout(() => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+          setMousePos({
+            x: ((e.clientX - rect.left) / rect.width) * 100,
+            y: ((e.clientY - rect.top) / rect.height) * 100,
+          });
+        }
+        throttleRef.current = null;
+      }, 40);
+    }
+  }, []);
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const ripple: Ripple = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        id: Date.now(),
+      };
+      setRipples((prev) => [...prev.slice(-4), ripple]);
+      setTimeout(
+        () => setRipples((prev) => prev.filter((r) => r.id !== ripple.id)),
+        600
+      );
+    }
+  }, []);
+
+  const isDisabled = disabled || !value.trim();
+  const handleFocus = () => setExpanded(true);
+  const handleBlur = () => {
+    if (!value.trim()) setTimeout(() => setExpanded(false), 150);
+  };
+
+  const glassClasses =
+    "relative overflow-hidden bg-gradient-to-r from-white/[0.08] via-white/[0.12] to-white/[0.08] backdrop-blur-2xl";
+
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+      className={cn(
+        "mx-auto flex items-center gap-3 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        expanded ? "w-full max-w-4xl" : "w-80 max-w-80 sm:w-96"
+      )}
+    >
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onClick={(e) => {
+          handleClick(e);
+          if (!expanded) {
+            setExpanded(true);
+            setTimeout(() => textareaRef.current?.focus(), 100);
+          }
+        }}
+        className={cn(
+          "group flex-1 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          glassClasses,
+          expanded
+            ? "rounded-3xl p-3 px-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]"
+            : "cursor-pointer rounded-full p-2 px-5 shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
+        )}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-within:opacity-100"
+          style={{ boxShadow: "0 0 0 1px rgba(14,26,54,0.08), 0 0 8px rgba(14,26,54,0.06), 0 0 20px rgba(200,204,209,0.08)" }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-300 group-hover:opacity-20 group-focus-within:opacity-20"
+          style={{ background: `radial-gradient(circle 120px at ${mousePos.x}% ${mousePos.y}%, rgba(14,26,54,0.06) 0%, rgba(200,204,209,0.04) 40%, transparent 70%)` }}
+        />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] opacity-0 transition-opacity duration-500 group-hover:opacity-30 group-focus-within:opacity-30">
+          <div
+            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent group-hover:translate-x-full"
+            style={{ transitionProperty: "transform", transitionDuration: "1500ms", transitionTimingFunction: "ease-out" }}
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-r from-oxford/[0.02] via-mercury/[0.03] to-oxford/[0.02] opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-within:opacity-100" />
+        <div className="pointer-events-none absolute inset-0 animate-pulse rounded-[inherit] bg-gradient-to-r from-transparent via-white/[0.04] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-25 group-focus-within:opacity-25" />
+        {ripples.map((r) => (
+          <div key={r.id} className="pointer-events-none absolute" style={{ left: r.x - 25, top: r.y - 25, width: 50, height: 50 }}>
+            <div className="h-full w-full animate-ping rounded-full bg-gradient-to-r from-oxford/[0.08] via-mercury/[0.06] to-oxford/[0.08]" />
+          </div>
+        ))}
+        {!expanded && (
+          <span className="relative z-10 flex-1 select-none py-1.5 font-body text-sm text-oxford/40">{placeholder}</span>
+        )}
+        {expanded && (
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            rows={1}
+            disabled={disabled}
+            className="relative z-10 max-h-[104px] min-h-[36px] w-full flex-1 resize-none bg-transparent px-3 py-2 font-body text-sm text-oxford outline-none placeholder:text-oxford/30"
+            style={{ lineHeight: "22px" }}
+          />
+        )}
+      </div>
+      <button
+        type="submit"
+        disabled={isDisabled}
+        aria-label="Send message"
+        className={cn(
+          "group relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all duration-300",
+          glassClasses,
+          isDisabled ? "cursor-not-allowed opacity-50" : "hover:shadow-[0_0_0_1px_rgba(14,26,54,0.1),0_0_12px_rgba(14,26,54,0.06)]"
+        )}
+        style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.06)" }}
+      >
+        <div className="pointer-events-none absolute inset-0 rounded-full bg-oxford/[0.06] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className={cn("relative z-10 transition-colors duration-200", isDisabled ? "text-oxford/30" : "text-oxford/70")}>
+          <path d="M16 22L16 10M16 10L11 15M16 10L21 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Chat Interface
+// ---------------------------------------------------------------------------
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const welcomeRef = useRef<HTMLDivElement>(null);
+  const welcomeHeadingRef = useRef<HTMLHeadingElement>(null);
+  const welcomeEyebrowRef = useRef<HTMLParagraphElement>(null);
+  const welcomeDescRef = useRef<HTMLParagraphElement>(null);
+  const welcomeButtonsRef = useRef<HTMLDivElement>(null);
+
+  // Welcome state GSAP animation
+  useGSAP(
+    () => {
+      if (!welcomeRef.current || !welcomeHeadingRef.current || messages.length > 0) return;
+
+      const tl = gsap.timeline({ delay: 0.3 });
+
+      if (welcomeEyebrowRef.current) {
+        tl.fromTo(
+          welcomeEyebrowRef.current,
+          { clipPath: "inset(0 100% 0 0)", opacity: 0 },
+          { clipPath: "inset(0 0% 0 0)", opacity: 1, duration: 0.8, ease: "power2.out" },
+          0
+        );
+      }
+
+      const split = SplitText.create(welcomeHeadingRef.current, { type: "chars,words" });
+      tl.from(split.chars, {
+        y: 60,
+        opacity: 0,
+        filter: "blur(8px)",
+        stagger: 0.03,
+        duration: 1,
+        ease: "power4.out",
+      }, 0.15);
+
+      if (welcomeDescRef.current) {
+        tl.from(welcomeDescRef.current, {
+          opacity: 0, y: 20, filter: "blur(4px)", duration: 0.8, ease: "power3.out",
+        }, "-=0.5");
+      }
+
+      if (welcomeButtonsRef.current) {
+        const buttons = welcomeButtonsRef.current.querySelectorAll("button");
+        tl.from(buttons, {
+          y: 20, opacity: 0, stagger: 0.08, duration: 0.5, ease: "power3.out",
+        }, "-=0.3");
+      }
+    },
+    { scope: welcomeRef, dependencies: [messages.length] }
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  function simulateStreaming(responseText: string, responseOptions?: ChatOption[]) {
+    const words = responseText.split(/(\s+)/);
+    let accumulated = "";
+    let wordIndex = 0;
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "", isStreaming: true },
+    ]);
+
+    const interval = setInterval(() => {
+      if (wordIndex >= words.length) {
+        clearInterval(interval);
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last.role === "assistant") {
+            last.isStreaming = false;
+            last.options = responseOptions;
+          }
+          return [...updated];
+        });
+        setIsTyping(false);
+        return;
+      }
+
+      accumulated += words[wordIndex];
+      wordIndex++;
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") {
+          last.content = accumulated;
+        }
+        return [...updated];
+      });
+    }, 40);
+  }
 
   function sendMessage(text: string) {
     const userMessage: Message = { role: "user", content: text };
@@ -28,18 +325,11 @@ export function ChatInterface() {
 
     setTimeout(() => {
       const response = getResponse(text);
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: response.text,
-        options: response.options,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 400 + Math.random() * 400);
+      simulateStreaming(response.text, response.options);
+    }, 300 + Math.random() * 300);
   }
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  function handleSubmit() {
     const text = input.trim();
     if (!text || isTyping) return;
     setInput("");
@@ -54,145 +344,139 @@ export function ChatInterface() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit();
     }
   }
 
   const welcomeOptions = getWelcomeOptions();
-  const lastAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant");
+  const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex h-[calc(100vh-80px)] flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-3xl space-y-6">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-oxford">
-                <span className="font-cormorant text-2xl font-bold text-white">C</span>
-              </div>
-              <h2 className="font-cormorant text-2xl text-oxford">
-                Crestline Advisor
-              </h2>
-              <p className="mt-3 max-w-md font-body text-sm text-oxford/50">
-                Get instant answers about our services, team, market insights,
-                and the real estate process. Choose a topic or type your question.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-2">
-                {welcomeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => handleOptionClick(option)}
-                    className="rounded-lg border border-mercury/40 px-5 py-2.5 font-body text-sm text-oxford/60 transition-colors duration-300 hover:border-oxford/30 hover:bg-oxford/5 hover:text-oxford"
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+    <div className="flex h-full flex-col">
+      <div className="relative flex-1 overflow-y-auto">
+        {!hasMessages && (
+          <div className="absolute inset-0 z-0">
+            <Suspense fallback={null}>
+              <GenerativeScene />
+            </Suspense>
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent" />
+          </div>
+        )}
 
-          {messages.map((message, i) => (
-            <div key={i}>
-              <div
-                className={cn(
-                  "flex",
-                  message.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                {message.role === "assistant" && (
-                  <div className="mr-3 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oxford">
+        <div className="relative z-10 px-4 py-8 sm:px-6">
+          <div className="mx-auto max-w-3xl space-y-6">
+            {/* Welcome State — GSAP animated */}
+            {!hasMessages && (
+              <div ref={welcomeRef} className="flex flex-col items-center justify-end pb-12 pt-[40vh] text-center">
+                <div>
+                  <p ref={welcomeEyebrowRef} className="font-bebas text-xs uppercase tracking-[0.2em] text-mercury">
+                    AI-Powered Advisory
+                  </p>
+                  <h2 ref={welcomeHeadingRef} className="mt-3 text-3xl text-oxford sm:text-4xl md:text-5xl">
+                    <span className="font-cormorant">Ask </span>
+                    <span className="font-bebas">CRESTLINE.</span>
+                  </h2>
+                  <p ref={welcomeDescRef} className="mx-auto mt-4 max-w-md font-body text-sm text-oxford/50">
+                    Get instant answers about our services, team, market
+                    insights, and the real estate process.
+                  </p>
+                </div>
+
+                <div ref={welcomeButtonsRef} className="mt-8 flex flex-wrap justify-center gap-2">
+                  {welcomeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleOptionClick(option)}
+                      className="rounded-full border border-mercury/40 bg-white/80 px-5 py-2.5 font-body text-sm text-oxford/60 backdrop-blur-sm transition-all duration-300 hover:border-oxford/30 hover:bg-white hover:text-oxford"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Message Bubbles — with entrance animations */}
+            {messages.map((message, i) => (
+              <AnimatedMessage key={i} role={message.role}>
+                <div className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                  {message.role === "assistant" && (
+                    <div className="mr-3 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oxford">
+                      <span className="font-cormorant text-xs font-bold text-white">C</span>
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      "max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed sm:max-w-[75%]",
+                      message.role === "user"
+                        ? "bg-oxford font-body text-white"
+                        : "bg-bone font-body text-oxford"
+                    )}
+                  >
+                    {message.role === "assistant" && message.isStreaming ? (
+                      <StreamingText text={message.content} isStreaming={true} />
+                    ) : (
+                      <FormattedText text={message.content} />
+                    )}
+                  </div>
+                </div>
+
+                {message.role === "assistant" &&
+                  message.options &&
+                  i === messages.length - 1 &&
+                  !isTyping && (
+                    <div className="ml-11 mt-3 flex flex-wrap gap-2">
+                      {message.options.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleOptionClick(option)}
+                          className="rounded-full border border-mercury/40 px-4 py-2 font-body text-xs text-oxford/60 transition-all duration-300 hover:border-oxford/30 hover:bg-oxford/5 hover:text-oxford"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </AnimatedMessage>
+            ))}
+
+            {/* Typing Indicator — particle orbit */}
+            {isTyping && !messages.some((m) => m.isStreaming) && (
+              <AnimatedMessage role="assistant">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oxford">
                     <span className="font-cormorant text-xs font-bold text-white">C</span>
                   </div>
-                )}
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed sm:max-w-[75%]",
-                    message.role === "user"
-                      ? "bg-oxford font-body text-white"
-                      : "bg-bone font-body text-oxford"
-                  )}
-                >
-                  <FormattedText text={message.content} />
-                </div>
-              </div>
-
-              {message.role === "assistant" &&
-                message.options &&
-                i === messages.length - 1 &&
-                !isTyping && (
-                  <div className="ml-11 mt-3 flex flex-wrap gap-2">
-                    {message.options.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => handleOptionClick(option)}
-                        className="rounded-lg border border-mercury/40 px-4 py-2 font-body text-xs text-oxford/60 transition-colors duration-300 hover:border-oxford/30 hover:bg-oxford/5 hover:text-oxford"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
+                  <div className="flex flex-col items-center gap-2 rounded-2xl bg-bone px-5 py-3.5">
+                    <ParticleOrbitLoader size={80} />
+                    <span className="font-body text-xs text-oxford/40">Thinking...</span>
                   </div>
-                )}
-            </div>
-          ))}
-
-          {isTyping && (
-            <div className="flex items-start">
-              <div className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oxford">
-                <span className="font-cormorant text-xs font-bold text-white">C</span>
-              </div>
-              <div className="rounded-2xl bg-bone px-5 py-3.5">
-                <div className="flex gap-1.5">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-oxford/30 [animation-delay:0ms]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-oxford/30 [animation-delay:150ms]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-oxford/30 [animation-delay:300ms]" />
                 </div>
-              </div>
-            </div>
-          )}
+              </AnimatedMessage>
+            )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-mercury/30 bg-white p-4">
-        <form
+      <div className="bg-white/80 p-4 backdrop-blur-sm">
+        <GlowInputBar
+          value={input}
+          onChange={setInput}
           onSubmit={handleSubmit}
-          className="mx-auto flex max-w-3xl items-end gap-3"
-        >
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a question or choose an option above..."
-            rows={1}
-            className="flex-1 resize-none rounded-xl border border-mercury/40 bg-bone/50 px-4 py-3 font-body text-sm text-oxford outline-none placeholder:text-oxford/30 focus:border-oxford"
-            style={{ maxHeight: "120px" }}
-          />
-          <button
-            type="submit"
-            disabled={isTyping || !input.trim()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-oxford text-white transition-colors duration-300 hover:bg-oxford-light disabled:opacity-40"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
-        </form>
+          onKeyDown={handleKeyDown}
+          disabled={isTyping}
+          placeholder="Ask anything..."
+        />
       </div>
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Formatted Text
+// ---------------------------------------------------------------------------
 
 function FormattedText({ text }: { text: string }) {
   const lines = text.split("\n");
@@ -217,9 +501,7 @@ function FormattedText({ text }: { text: string }) {
           );
         }
 
-        return (
-          <div key={i} dangerouslySetInnerHTML={{ __html: formatted }} />
-        );
+        return <div key={i} dangerouslySetInnerHTML={{ __html: formatted }} />;
       })}
     </div>
   );

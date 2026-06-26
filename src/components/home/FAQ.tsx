@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/lib/gsap-init";
 import { cn } from "@/lib/utils";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { ScrollFadeIn } from "@/components/ui/ScrollFadeIn";
 import { FAQ_ITEMS } from "@/lib/constants";
 
 function FAQItem({
@@ -18,6 +19,42 @@ function FAQItem({
   open: boolean;
   onToggle: () => void;
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const iconRef = useRef<HTMLSpanElement>(null);
+
+  useGSAP(
+    () => {
+      if (!contentRef.current || !iconRef.current) return;
+
+      if (open) {
+        gsap.to(contentRef.current, {
+          height: "auto",
+          opacity: 1,
+          duration: 0.5,
+          ease: "power3.inOut",
+        });
+        gsap.to(iconRef.current, {
+          rotation: 45,
+          duration: 0.4,
+          ease: "power3.out",
+        });
+      } else {
+        gsap.to(contentRef.current, {
+          height: 0,
+          opacity: 0,
+          duration: 0.4,
+          ease: "power3.inOut",
+        });
+        gsap.to(iconRef.current, {
+          rotation: 0,
+          duration: 0.4,
+          ease: "power3.out",
+        });
+      }
+    },
+    { dependencies: [open] }
+  );
+
   return (
     <div className="border-b border-mercury/30">
       <button
@@ -28,10 +65,8 @@ function FAQItem({
           {question}
         </span>
         <span
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-mercury/40 text-oxford/60 transition-transform duration-300",
-            open && "rotate-45"
-          )}
+          ref={iconRef}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-mercury/40 text-oxford/60"
         >
           <svg
             width="14"
@@ -46,15 +81,10 @@ function FAQItem({
           </svg>
         </span>
       </button>
-      <div
-        className="grid transition-all duration-300 ease-in-out"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-      >
-        <div className="overflow-hidden">
-          <p className="pb-6 font-body leading-relaxed text-oxford/60">
-            {answer}
-          </p>
-        </div>
+      <div ref={contentRef} className="h-0 overflow-hidden opacity-0">
+        <p className="pb-6 font-body leading-relaxed text-oxford/60">
+          {answer}
+        </p>
       </div>
     </div>
   );
@@ -62,31 +92,54 @@ function FAQItem({
 
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!listRef.current) return;
+
+      const items = listRef.current.querySelectorAll<HTMLElement>("[data-faq-item]");
+      gsap.from(items, {
+        x: -50,
+        opacity: 0,
+        filter: "blur(6px)",
+        stagger: 0.08,
+        duration: 0.8,
+        ease: "power3.out",
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: listRef.current,
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+      });
+    },
+    { scope: listRef }
+  );
 
   return (
     <section className="bg-white py-32 sm:py-40">
       <Container className="max-w-3xl">
-        <ScrollFadeIn>
-          <SectionHeading
-            eyebrow="FAQ"
-            title={
-              <>
-                <span className="font-cormorant">Frequently Asked </span>
-                <span className="font-bebas">QUESTIONS</span>
-              </>
-            }
-          />
-        </ScrollFadeIn>
+        <SectionHeading
+          eyebrow="FAQ"
+          title={
+            <>
+              <span className="font-cormorant">Frequently Asked </span>
+              <span className="font-bebas">QUESTIONS</span>
+            </>
+          }
+        />
 
-        <div>
+        <div ref={listRef}>
           {FAQ_ITEMS.map((item, i) => (
-            <FAQItem
-              key={i}
-              question={item.question}
-              answer={item.answer}
-              open={openIndex === i}
-              onToggle={() => setOpenIndex(openIndex === i ? null : i)}
-            />
+            <div key={i} data-faq-item>
+              <FAQItem
+                question={item.question}
+                answer={item.answer}
+                open={openIndex === i}
+                onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+              />
+            </div>
           ))}
         </div>
       </Container>

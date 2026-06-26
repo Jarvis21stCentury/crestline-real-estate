@@ -13,6 +13,10 @@
   --font-dm-serif: var(--font-dm-serif);
   --font-body: var(--font-libre);
   --font-playfair: var(--font-playfair);
+
+  --animate-fade-in: fade-in 0.8s ease-out forwards;
+  --animate-fade-up: fade-up 1s ease-out forwards;
+  --animate-float: float 6s ease-in-out infinite;
 }
 
 @layer base {
@@ -33,28 +37,18 @@
 }
 
 @layer utilities {
-  .scroll-fade-in {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-  }
-
-  .scroll-fade-in.in-view {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
   .hero-gradient-animate {
     background: linear-gradient(
       135deg,
-      var(--color-oxford) 0%,
-      var(--color-oxford-light) 25%,
-      var(--color-oxford) 50%,
-      var(--color-oxford-light) 75%,
-      var(--color-oxford) 100%
+      #0E1A36 0%,
+      #1a2d52 20%,
+      #2a3f6b 40%,
+      #1a2d52 60%,
+      #0E1A36 80%,
+      #1a2d52 100%
     );
     background-size: 400% 400%;
-    animation: gradientShift 12s ease infinite;
+    animation: gradientShift 10s ease infinite;
   }
 }
 
@@ -64,9 +58,245 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes rim-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ripple-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -20px); }
+}
+
+/* Custom slider styles */
+@layer components {
+  .tool-slider-input {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    height: 20px;
+    margin: 0;
+  }
+
+  .tool-slider-input::-webkit-slider-runnable-track {
+    height: 4px;
+    background: transparent;
+    border-radius: 9999px;
+  }
+
+  .tool-slider-input::-moz-range-track {
+    height: 4px;
+    background: transparent;
+    border-radius: 9999px;
+    border: none;
+  }
+
+  .tool-slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    margin-top: -8px;
+    cursor: pointer;
+  }
+
+  .tool-slider-input::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .tool-slider-input:focus {
+    outline: none;
+  }
+
+  .tool-slider-input:focus-visible + div {
+    outline: 2px solid var(--color-oxford);
+    outline-offset: 2px;
+  }
+}
+
+/* ── View Transitions ── */
+@supports (view-transition-name: none) {
+  ::view-transition-group(site-header) {
+    animation: none;
+    z-index: 100;
+  }
+  ::view-transition-old(site-header) {
+    display: none;
+  }
+  ::view-transition-new(site-header) {
+    animation: none;
+  }
+
+  /* Default crossfade (fallback when no transition type matches) */
+  ::view-transition-old(root) {
+    animation: 400ms cubic-bezier(0.22, 1, 0.36, 1) both vt-page-exit;
+  }
+  ::view-transition-new(root) {
+    animation: 400ms cubic-bezier(0.22, 1, 0.36, 1) both vt-fade-in;
+  }
+
+  ::view-transition-old(page-title) {
+    animation: 400ms cubic-bezier(0.22, 1, 0.36, 1) both vt-page-exit;
+  }
+  ::view-transition-new(page-title) {
+    animation: 400ms cubic-bezier(0.22, 1, 0.36, 1) both vt-fade-in;
+  }
+
+  /* Directional slides — forward navigation */
+  ::view-transition-old(root):active-transition-type(slide-forward) {
+    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-out-left;
+  }
+  ::view-transition-new(root):active-transition-type(slide-forward) {
+    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-in-right;
+  }
+
+  /* Directional slides — backward navigation */
+  ::view-transition-old(root):active-transition-type(slide-back) {
+    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-out-right;
+  }
+  ::view-transition-new(root):active-transition-type(slide-back) {
+    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-in-left;
+  }
+
+  /* Circle wipe — from CTA click point */
+  ::view-transition-old(root):active-transition-type(circle-wipe) {
+    animation: 600ms cubic-bezier(0.22, 1, 0.36, 1) both vt-page-exit;
+    z-index: 1;
+  }
+  ::view-transition-new(root):active-transition-type(circle-wipe) {
+    animation: 600ms cubic-bezier(0.22, 1, 0.36, 1) both vt-circle-in;
+    z-index: 2;
+  }
+
+  /* Curtain reveal — vertical wipe */
+  ::view-transition-old(root):active-transition-type(curtain) {
+    animation: 700ms cubic-bezier(0.77, 0, 0.175, 1) both vt-page-exit;
+  }
+  ::view-transition-new(root):active-transition-type(curtain) {
+    animation: 700ms cubic-bezier(0.77, 0, 0.175, 1) both vt-curtain-in;
+  }
+
+  /* Shared element morph */
+  ::view-transition-group(cta-morph) {
+    animation-duration: 500ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* Enhanced exit — scale down + blur + float */
+@keyframes vt-page-exit {
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(calc(-20px - var(--scroll-progress, 0) * 40px));
+    filter: blur(8px);
+  }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+}
+
+/* Directional slide keyframes */
+@keyframes vt-slide-out-left {
+  to { opacity: 0; transform: translateX(-30%); filter: blur(4px); }
+}
+@keyframes vt-slide-in-right {
+  from { opacity: 0; transform: translateX(30%); filter: blur(4px); }
+}
+@keyframes vt-slide-out-right {
+  to { opacity: 0; transform: translateX(30%); filter: blur(4px); }
+}
+@keyframes vt-slide-in-left {
+  from { opacity: 0; transform: translateX(-30%); filter: blur(4px); }
+}
+
+/* Circle wipe from click point */
+@keyframes vt-circle-in {
+  from { clip-path: circle(0% at var(--click-x, 50%) var(--click-y, 50%)); }
+  to { clip-path: circle(150% at var(--click-x, 50%) var(--click-y, 50%)); }
+}
+
+/* Curtain vertical wipe */
+@keyframes vt-curtain-in {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* ── Film Grain Overlay ── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: grain 0.5s steps(6) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { background-position: 0 0; }
+  20% { background-position: -20px 20px; }
+  40% { background-position: 40px -40px; }
+  60% { background-position: -40px 10px; }
+  80% { background-position: 20px -30px; }
+}
+
+/* ── Marquee ── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  body::after {
+    animation: none;
   }
 }

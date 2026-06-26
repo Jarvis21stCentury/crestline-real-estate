@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <div className="pt-20">
+    <div className="fixed inset-0 top-[72px] z-30 flex flex-col bg-white">
       <ChatInterface />
     </div>
   );

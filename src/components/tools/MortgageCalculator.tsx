@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
+import { ToolSlider } from "./ToolSlider";
+import { ResultRow } from "./ResultRow";
+import { LoanTermSelector } from "./LoanTermSelector";
+import { ToolAnimatedValue } from "./ToolAnimatedValue";
+import { DonutChart } from "./DonutChart";
 
 export function MortgageCalculator() {
   const [homePrice, setHomePrice] = useState(750000);
@@ -30,87 +35,49 @@ export function MortgageCalculator() {
   const totalMonthly = monthlyPI + monthlyTax + monthlyInsurance;
   const totalCost = totalMonthly * totalPayments;
 
+  const donutSegments = [
+    { label: "Principal & Interest", value: monthlyPI, color: "#0E1A36" },
+    { label: "Property Tax", value: monthlyTax, color: "#C8CCD1" },
+    { label: "Insurance", value: monthlyInsurance, color: "#E5E4E2" },
+  ];
+
   return (
     <div className="grid gap-8 lg:grid-cols-2">
       <div className="space-y-5">
-        <InputSlider label="Home Price" value={homePrice} onChange={setHomePrice} min={50000} max={5000000} step={10000} format="currency" />
-        <InputSlider label="Down Payment" value={downPaymentPct} onChange={setDownPaymentPct} min={0} max={50} step={1} suffix="%" />
-        <InputSlider label="Interest Rate" value={interestRate} onChange={setInterestRate} min={1} max={12} step={0.125} suffix="%" />
-        <div>
-          <label className="mb-1.5 block font-body text-sm font-bold text-oxford">Loan Term</label>
-          <div className="flex gap-3">
-            {[15, 20, 30].map((term) => (
-              <button
-                key={term}
-                onClick={() => setLoanTerm(term)}
-                className={`flex-1 rounded-lg border py-2.5 font-bebas text-sm uppercase tracking-[0.1em] transition-colors duration-300 ${
-                  loanTerm === term
-                    ? "border-oxford bg-oxford text-white"
-                    : "border-mercury/40 text-oxford/60 hover:border-oxford/30"
-                }`}
-              >
-                {term} yr
-              </button>
-            ))}
-          </div>
-        </div>
-        <InputSlider label="Property Tax Rate" value={propertyTaxRate} onChange={setPropertyTaxRate} min={0} max={3} step={0.05} suffix="%" />
-        <InputSlider label="Annual Insurance" value={insuranceAnnual} onChange={setInsuranceAnnual} min={0} max={10000} step={100} format="currency" />
+        <ToolSlider label="Home Price" value={homePrice} onChange={setHomePrice} min={50000} max={5000000} step={10000} format="currency" />
+        <ToolSlider label="Down Payment" value={downPaymentPct} onChange={setDownPaymentPct} min={0} max={50} step={1} suffix="%" />
+        <ToolSlider label="Interest Rate" value={interestRate} onChange={setInterestRate} min={1} max={12} step={0.125} suffix="%" />
+        <LoanTermSelector value={loanTerm} onChange={setLoanTerm} />
+        <ToolSlider label="Property Tax Rate" value={propertyTaxRate} onChange={setPropertyTaxRate} min={0} max={3} step={0.05} suffix="%" />
+        <ToolSlider label="Annual Insurance" value={insuranceAnnual} onChange={setInsuranceAnnual} min={0} max={10000} step={100} format="currency" />
       </div>
 
-      <div className="rounded-2xl border border-mercury/30 bg-bone/50 p-8">
+      <div className="rounded-2xl border border-white/60 bg-white/70 p-8 shadow-[0_8px_32px_rgba(14,26,54,0.06),0_2px_8px_rgba(14,26,54,0.04)] backdrop-blur-md transition-shadow duration-300 hover:shadow-[0_12px_40px_rgba(14,26,54,0.10),0_4px_12px_rgba(14,26,54,0.06)]">
         <p className="font-bebas text-xs uppercase tracking-[0.15em] text-mercury">
           Estimated Monthly Payment
         </p>
-        <p className="mt-2 font-bebas text-5xl text-oxford sm:text-6xl">
-          {formatCurrency(totalMonthly)}
-        </p>
+        <div className="mt-2 font-bebas text-5xl text-oxford sm:text-6xl">
+          <ToolAnimatedValue value={totalMonthly} />
+        </div>
 
-        <div className="mt-8 space-y-4">
+        <DonutChart
+          segments={donutSegments}
+          centerLabel="Monthly"
+          centerValue={formatCurrency(totalMonthly)}
+          className="mt-8"
+        />
+
+        <div className="mt-8 space-y-1">
           <ResultRow label="Principal & Interest" value={monthlyPI} />
           <ResultRow label="Property Tax" value={monthlyTax} />
           <ResultRow label="Home Insurance" value={monthlyInsurance} />
-          <div className="border-t border-mercury/30 pt-4">
-            <ResultRow label="Down Payment" value={downPayment} />
-            <ResultRow label="Loan Amount" value={loanAmount} />
-          </div>
-          <div className="border-t border-mercury/30 pt-4">
-            <ResultRow label="Total Cost Over Loan Life" value={totalCost} />
-          </div>
+          <div className="my-2 h-px bg-mercury/20" />
+          <ResultRow label="Down Payment" value={downPayment} />
+          <ResultRow label="Loan Amount" value={loanAmount} />
+          <div className="my-2 h-px bg-mercury/20" />
+          <ResultRow label="Total Cost Over Loan Life" value={totalCost} bold />
         </div>
       </div>
-    </div>
-  );
-}
-
-function ResultRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="font-body text-sm text-oxford/60">{label}</span>
-      <span className="font-bebas text-sm text-oxford">{formatCurrency(value)}</span>
-    </div>
-  );
-}
-
-function InputSlider({
-  label, value, onChange, min, max, step, suffix, format,
-}: {
-  label: string; value: number; onChange: (v: number) => void;
-  min: number; max: number; step: number; suffix?: string; format?: "currency";
-}) {
-  const display = format === "currency" ? formatCurrency(value) : `${value}${suffix || ""}`;
-
-  return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <label className="font-body text-sm font-bold text-oxford">{label}</label>
-        <span className="font-bebas text-sm text-oxford">{display}</span>
-      </div>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-oxford"
-      />
     </div>
   );
 }

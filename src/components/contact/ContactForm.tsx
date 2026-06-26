@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useRef, type FormEvent } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/lib/gsap-init";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { PROPERTY_TYPES } from "@/lib/constants";
@@ -28,6 +30,45 @@ export function ContactForm() {
   const [form, setForm] = useState<FormData>(initialForm);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!formRef.current) return;
+
+      const fields = formRef.current.querySelectorAll<HTMLElement>("[data-field]");
+      gsap.from(fields, {
+        y: 25,
+        opacity: 0,
+        filter: "blur(4px)",
+        stagger: 0.08,
+        duration: 0.7,
+        ease: "power3.out",
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: formRef.current,
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+      });
+    },
+    { scope: formRef }
+  );
+
+  useGSAP(
+    () => {
+      if (!submitted || !successRef.current) return;
+
+      gsap.from(successRef.current, {
+        scale: 0.8,
+        opacity: 0,
+        duration: 0.6,
+        ease: "back.out(1.7)",
+      });
+    },
+    { dependencies: [submitted] }
+  );
 
   function validate(): boolean {
     const newErrors: Partial<FormData> = {};
@@ -42,9 +83,7 @@ export function ContactForm() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (validate()) {
-      setSubmitted(true);
-    }
+    if (validate()) setSubmitted(true);
   }
 
   function update(field: keyof FormData, value: string) {
@@ -54,7 +93,7 @@ export function ContactForm() {
 
   if (submitted) {
     return (
-      <div className="rounded-2xl border border-mercury/30 bg-bone/50 p-10 text-center">
+      <div ref={successRef} className="rounded-2xl border border-mercury/30 bg-bone/50 p-10 text-center">
         <h3 className="font-cormorant text-2xl text-oxford">Thank You</h3>
         <p className="mt-4 font-body text-oxford/60">
           We&apos;ve received your inquiry and will be in touch within one
@@ -75,8 +114,8 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+      <div data-field>
         <label className="mb-1.5 block font-body text-sm font-bold text-oxford">
           Full Name <span className="text-red-500">*</span>
         </label>
@@ -87,12 +126,10 @@ export function ContactForm() {
           placeholder="Your name"
           className={cn(inputClasses, errors.name && "border-red-400")}
         />
-        {errors.name && (
-          <p className="mt-1 font-body text-xs text-red-500">{errors.name}</p>
-        )}
+        {errors.name && <p className="mt-1 font-body text-xs text-red-500">{errors.name}</p>}
       </div>
 
-      <div>
+      <div data-field>
         <label className="mb-1.5 block font-body text-sm font-bold text-oxford">
           Email Address <span className="text-red-500">*</span>
         </label>
@@ -103,12 +140,10 @@ export function ContactForm() {
           placeholder="you@company.com"
           className={cn(inputClasses, errors.email && "border-red-400")}
         />
-        {errors.email && (
-          <p className="mt-1 font-body text-xs text-red-500">{errors.email}</p>
-        )}
+        {errors.email && <p className="mt-1 font-body text-xs text-red-500">{errors.email}</p>}
       </div>
 
-      <div>
+      <div data-field>
         <label className="mb-1.5 block font-body text-sm font-bold text-oxford">
           Phone Number
         </label>
@@ -121,7 +156,7 @@ export function ContactForm() {
         />
       </div>
 
-      <div>
+      <div data-field>
         <label className="mb-1.5 block font-body text-sm font-bold text-oxford">
           Property Interest
         </label>
@@ -132,14 +167,12 @@ export function ContactForm() {
         >
           <option value="">Select a category</option>
           {PROPERTY_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
+            <option key={type} value={type}>{type}</option>
           ))}
         </select>
       </div>
 
-      <div>
+      <div data-field>
         <label className="mb-1.5 block font-body text-sm font-bold text-oxford">
           Message <span className="text-red-500">*</span>
         </label>
@@ -148,20 +181,16 @@ export function ContactForm() {
           onChange={(e) => update("message", e.target.value)}
           placeholder="Tell us about your real estate goals..."
           rows={5}
-          className={cn(
-            inputClasses,
-            "resize-none",
-            errors.message && "border-red-400"
-          )}
+          className={cn(inputClasses, "resize-none", errors.message && "border-red-400")}
         />
-        {errors.message && (
-          <p className="mt-1 font-body text-xs text-red-500">{errors.message}</p>
-        )}
+        {errors.message && <p className="mt-1 font-body text-xs text-red-500">{errors.message}</p>}
       </div>
 
-      <Button variant="primary" type="submit" className="w-full sm:w-auto">
-        Send Inquiry
-      </Button>
+      <div data-field>
+        <Button variant="primary" type="submit" className="w-full sm:w-auto">
+          Send Inquiry
+        </Button>
+      </div>
     </form>
   );
 }

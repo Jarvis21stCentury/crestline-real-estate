@@ -29,6 +29,7 @@ export const SERVICES = [
     title: "Acquisitions & Dispositions",
     description:
       "Strategic sourcing, underwriting, and execution for commercial and residential acquisitions. We identify off-market opportunities and negotiate with precision.",
+    image: "/images/city-aerial.jpg",
   },
   {
     title: "Commercial Leasing",
@@ -39,6 +40,7 @@ export const SERVICES = [
     title: "Investment Advisory",
     description:
       "Data-driven investment strategies for institutional and private clients. Portfolio construction, risk assessment, and performance benchmarking.",
+    image: "/images/office-interior.jpg",
   },
   {
     title: "Property Management",
@@ -49,6 +51,7 @@ export const SERVICES = [
     title: "Market Research & Valuation",
     description:
       "Deep market intelligence and valuation analysis. Comparable sales, rent studies, and development feasibility reports.",
+    image: "/images/architecture.jpg",
   },
   {
     title: "Residential Services",
@@ -68,6 +71,7 @@ export const WHO_WE_SERVE = [
       "Investment portfolio advisory",
       "1031 exchange consulting",
     ],
+    image: "/images/commercial.jpg",
   },
   {
     title: "Residential Clients",
@@ -79,6 +83,7 @@ export const WHO_WE_SERVE = [
       "Relocation services",
       "Market timing & strategy",
     ],
+    image: "/images/residential.jpg",
   },
 ];
 

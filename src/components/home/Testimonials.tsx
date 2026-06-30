@@ -16,6 +16,7 @@ export function Testimonials() {
       if (!gridRef.current) return;
 
       const cards = gridRef.current.querySelectorAll<HTMLElement>("[data-testimonial]");
+      const splits: SplitText[] = [];
 
       cards.forEach((card, i) => {
         const quoteMark = card.querySelector("[data-quote-mark]");
@@ -52,6 +53,7 @@ export function Testimonials() {
 
         if (quoteText) {
           const split = SplitText.create(quoteText, { type: "words" });
+          splits.push(split);
           tl.from(split.words, {
             opacity: 0,
             y: 12,
@@ -72,6 +74,8 @@ export function Testimonials() {
           }, "-=0.2");
         }
       });
+
+      return () => splits.forEach((split) => split.revert());
     },
     { scope: gridRef }
   );

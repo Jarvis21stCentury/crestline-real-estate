@@ -25,11 +25,11 @@ export function CredentialsSection() {
       const cards = gridRef.current.querySelectorAll<HTMLElement>("[data-cred-card]");
 
       gsap.from(cards, {
-        clipPath: "inset(0 0 100% 0)",
         opacity: 0,
-        y: 30,
+        y: 40,
+        filter: "blur(10px)",
         stagger: { from: "center", each: 0.1 },
-        duration: 0.7,
+        duration: 1,
         ease: "power3.out",
         immediateRender: false,
         scrollTrigger: {

@@ -40,6 +40,8 @@ export function AboutHero() {
           opacity: 0, filter: "blur(8px)", y: 30, duration: 1, ease: "power3.out",
         }, "-=0.6");
       }
+
+      return () => split.revert();
     },
     { scope: sectionRef }
   );

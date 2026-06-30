@@ -76,6 +76,8 @@ export function Hero() {
             0
           ),
       });
+
+      return () => split.revert();
     },
     { scope: sectionRef }
   );

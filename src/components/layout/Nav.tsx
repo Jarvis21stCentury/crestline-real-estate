@@ -152,14 +152,18 @@ export function Nav() {
       gsap.to(indicator, { opacity: 0, duration: 0.2 });
     };
 
+    const handlers = new Map<HTMLElement, () => void>();
     links.forEach((link) => {
-      link.addEventListener("mouseenter", () => moveIndicator(link));
+      const handler = () => moveIndicator(link);
+      handlers.set(link, handler);
+      link.addEventListener("mouseenter", handler);
     });
     container.addEventListener("mouseleave", hideIndicator);
 
     return () => {
       links.forEach((link) => {
-        link.removeEventListener("mouseenter", () => moveIndicator(link));
+        const handler = handlers.get(link);
+        if (handler) link.removeEventListener("mouseenter", handler);
       });
       container.removeEventListener("mouseleave", hideIndicator);
     };
@@ -184,8 +188,8 @@ export function Nav() {
           className={cn(
             "rounded-full border px-5 py-2.5 transition-all duration-300 backdrop-blur-lg",
             light
-              ? "bg-oxford/60 border-white/[0.1]"
-              : "bg-white/60 border-oxford/[0.06] shadow-[0_1px_12px_rgba(0,0,0,0.04)]"
+              ? "bg-oxford border-white/[0.1]"
+              : "bg-white border-oxford/[0.06] shadow-[0_1px_12px_rgba(0,0,0,0.04)]"
           )}
         >
           <span
@@ -204,8 +208,8 @@ export function Nav() {
           className={cn(
             "relative hidden items-center gap-1 rounded-full border px-2 py-1.5 transition-all duration-300 backdrop-blur-lg lg:flex",
             light
-              ? "bg-oxford/60 border-white/[0.1]"
-              : "bg-white/60 border-oxford/[0.06] shadow-[0_1px_12px_rgba(0,0,0,0.04)]"
+              ? "bg-oxford border-white/[0.1]"
+              : "bg-white border-oxford/[0.06] shadow-[0_1px_12px_rgba(0,0,0,0.04)]"
           )}
         >
           {/* Hover indicator */}
@@ -263,8 +267,8 @@ export function Nav() {
           className={cn(
             "flex flex-col gap-1.5 rounded-full border p-3 transition-all duration-300 backdrop-blur-lg lg:hidden",
             light
-              ? "bg-oxford/60 border-white/[0.1]"
-              : "bg-white/60 border-oxford/[0.06]"
+              ? "bg-oxford border-white/[0.1]"
+              : "bg-white border-oxford/[0.06]"
           )}
           aria-label="Toggle menu"
         >
@@ -295,7 +299,7 @@ export function Nav() {
       {/* Mobile Menu Overlay — GSAP clip-path reveal */}
       <div
         ref={overlayRef}
-        className="fixed inset-0 top-0 z-40 bg-oxford/95 backdrop-blur-xl lg:hidden"
+        className="fixed inset-0 top-0 z-40 bg-oxford backdrop-blur-xl lg:hidden"
         style={{ clipPath: "circle(0% at 95% 3%)" }}
       >
         <div ref={menuItemsRef} className="flex h-full flex-col items-center justify-center gap-6">

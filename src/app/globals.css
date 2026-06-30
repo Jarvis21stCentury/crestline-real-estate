@@ -183,39 +183,12 @@
     animation: 400ms cubic-bezier(0.22, 1, 0.36, 1) both vt-fade-in;
   }
 
-  /* Directional slides — forward navigation */
-  ::view-transition-old(root):active-transition-type(slide-forward) {
-    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-out-left;
-  }
-  ::view-transition-new(root):active-transition-type(slide-forward) {
-    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-in-right;
-  }
-
-  /* Directional slides — backward navigation */
-  ::view-transition-old(root):active-transition-type(slide-back) {
-    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-out-right;
-  }
-  ::view-transition-new(root):active-transition-type(slide-back) {
-    animation: 500ms cubic-bezier(0.22, 1, 0.36, 1) both vt-slide-in-left;
-  }
-
-  /* Circle wipe — from CTA click point */
-  ::view-transition-old(root):active-transition-type(circle-wipe) {
-    animation: 600ms cubic-bezier(0.22, 1, 0.36, 1) both vt-page-exit;
-    z-index: 1;
-  }
-  ::view-transition-new(root):active-transition-type(circle-wipe) {
-    animation: 600ms cubic-bezier(0.22, 1, 0.36, 1) both vt-circle-in;
-    z-index: 2;
-  }
-
-  /* Curtain reveal — vertical wipe */
-  ::view-transition-old(root):active-transition-type(curtain) {
-    animation: 700ms cubic-bezier(0.77, 0, 0.175, 1) both vt-page-exit;
-  }
-  ::view-transition-new(root):active-transition-type(curtain) {
-    animation: 700ms cubic-bezier(0.77, 0, 0.175, 1) both vt-curtain-in;
-  }
+  /* Directional slides, circle-wipe, and curtain reveal (per transition type)
+     live in a runtime-injected <style> tag — see RootLayout — because
+     Turbopack's CSS parser in this Next.js version cannot parse the
+     `:active-view-transition-type()` pseudo-class despite it being valid,
+     spec-compliant syntax. Injecting it at runtime bypasses the build-time
+     parser entirely; the browser parses and applies it normally. */
 
   /* Shared element morph */
   ::view-transition-group(cta-morph) {

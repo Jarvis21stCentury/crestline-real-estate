@@ -270,6 +270,8 @@ export function ChatInterface() {
           y: 20, opacity: 0, stagger: 0.08, duration: 0.5, ease: "power3.out",
         }, "-=0.3");
       }
+
+      return () => split.revert();
     },
     { scope: welcomeRef, dependencies: [messages.length] }
   );

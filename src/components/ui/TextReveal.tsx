@@ -34,6 +34,8 @@ export function TextReveal({ children, className }: TextRevealProps) {
           toggleActions: "play none none none",
         },
       });
+
+      return () => split.revert();
     },
     { scope: ref }
   );

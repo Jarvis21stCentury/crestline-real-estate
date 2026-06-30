@@ -46,8 +46,9 @@ export function SectionHeading({
         );
       }
 
+      let split: SplitText | undefined;
       if (titleRef.current) {
-        const split = SplitText.create(titleRef.current, { type: "words" });
+        split = SplitText.create(titleRef.current, { type: "words" });
         tl.from(
           split.words,
           {
@@ -70,6 +71,8 @@ export function SectionHeading({
           "-=0.4"
         );
       }
+
+      return () => split?.revert();
     },
     { scope: containerRef }
   );

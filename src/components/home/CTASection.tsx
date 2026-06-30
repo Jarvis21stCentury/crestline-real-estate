@@ -88,6 +88,8 @@ export function CTASection() {
           },
         });
       }
+
+      return () => split.revert();
     },
     { scope: sectionRef }
   );
